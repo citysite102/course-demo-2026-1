@@ -1,0 +1,180 @@
+:root {
+  --bg: #eaeef2;
+  --panel: #f7f9fb;
+  --ink: #15191f;
+  --muted: #63707e;
+  --line: #cfd8e1;
+  --accent: #0f8f84;
+  --alert: #c6483c;
+  --shadow: 18px 40px rgba(21, 25, 31, .10);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #10141a;
+    --panel: #171d25;
+    --ink: #e8edf3;
+    --muted: #8b99a8;
+    --line: #2a333e;
+    --accent: #37c2b3;
+    --alert: #e2685a;
+    --shadow: 18px 40px rgba(0, 0, 0, .45);
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #10141a;
+  --panel: #171d25;
+  --ink: #e8edf3;
+  --muted: #8b99a8;
+  --line: #2a333e;
+  --accent: #37c2b3;
+  --alert: #e2685a;
+  --shadow: 18px 40px rgba(0, 0, 0, .45);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: "Noto Sans TC", system-ui, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+}
+
+/* ---------- 卡片 ---------- */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 36px 28px 28px;
+  width: min(420px, 100%);
+  text-align: center;
+  box-shadow: 0 var(--shadow);
+  animation: card-in .5s cubic-bezier(.2, .8, .3, 1) both;
+}
+.card.done { animation: card-flash .7s ease-out 3; }
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: .18em;
+  color: var(--muted);
+  margin: 0 0 20px;
+  transition: color .3s;
+}
+.done .eyebrow { color: var(--alert); }
+
+/* ---------- 錶面 ---------- */
+.dial {
+  position: relative;
+  width: min(260px, 70vw);
+  margin: 0 auto;
+  transition: opacity .3s, transform .3s;
+}
+.paused .dial { opacity: .55; transform: scale(.98); }
+.running .dial { animation: breathe 4s ease-in-out infinite; }
+.done .dial { animation: shake .5s cubic-bezier(.36, .07, .19, .97); }
+
+svg { display: block; width: 100%; height: auto; overflow: visible; }
+.track { fill: none; stroke: var(--line); stroke-width: 8; }
+.arc {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+  transition: stroke-dashoffset .2s linear, stroke .4s, filter .4s;
+  filter: drop-shadow(0 0 0 transparent);
+}
+.running .arc { filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 55%, transparent)); }
+.urgent .arc {
+  stroke: var(--alert);
+  animation: glow-pulse 1s ease-in-out infinite;
+}
+.done .arc { stroke: var(--alert); }
+
+.time {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "DM Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: clamp(38px, 13vw, 54px);
+  font-weight: 300;
+  transition: color .4s;
+}
+.urgent .time, .done .time { color: var(--alert); }
+.time.tick { animation: tick-pop .45s cubic-bezier(.2, 1.4, .4, 1); }
+
+/* ---------- 按鈕 ---------- */
+.controls { display: flex; gap: 10px; justify-content: center; margin-top: 26px; }
+button {
+  font: inherit;
+  font-weight: 600;
+  padding: 11px 26px;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  transition: transform .15s cubic-bezier(.2, .8, .3, 1), box-shadow .2s, background .2s, color .2s, opacity .2s;
+}
+button.primary { background: var(--alert); border-color: var(--alert); color: #fff; }
+button:not(.primary) { color: var(--alert); border-color: color-mix(in srgb, var(--alert) 45%, var(--line)); }
+button:hover { transform: translateY(-2px); box-shadow: 0 6px 16px color-mix(in srgb, var(--alert) 30%, transparent); }
+button:not(.primary):hover { background: color-mix(in srgb, var(--alert) 10%, transparent); }
+button:active { transform: translateY(0) scale(.95); box-shadow: none; }
+button:focus-visible { outline: 2px solid var(--alert); outline-offset: 3px; }
+button.pressed { animation: press-ring .5s ease-out; }
+.done button.primary { animation: attention 1.2s ease-in-out infinite; }
+
+.hint { margin: 18px 0 0; font-size: 12px; color: var(--muted); }
+
+/* ---------- 動畫 ---------- */
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(16px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes card-flash {
+  0%, 100% { background: var(--panel); }
+  35%      { background: color-mix(in srgb, var(--alert) 14%, var(--panel)); }
+}
+@keyframes breathe {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.015); }
+}
+@keyframes glow-pulse {
+  0%, 100% { filter: drop-shadow(0 0 3px color-mix(in srgb, var(--alert) 40%, transparent)); }
+  50%      { filter: drop-shadow(0 0 14px color-mix(in srgb, var(--alert) 85%, transparent)); }
+}
+@keyframes tick-pop {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+@keyframes shake {
+  10%, 90% { transform: translateX(-3px); }
+  20%, 80% { transform: translateX(5px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+@keyframes press-ring {
+  from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--alert) 55%, transparent); }
+  to   { box-shadow: 0 0 0 16px transparent; }
+}
+@keyframes attention {
+  0%, 100% { transform: scale(1); }
+  50%      { transform: scale(1.06); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: .01ms !important;
+  }
+}
