@@ -1,0 +1,167 @@
+<title>五分鐘計時器</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;500&family=Noto+Sans+TC:wght@400;600&display=swap">
+<style>
+  :root {
+    --bg: #eaeef2;
+    --panel: #f7f9fb;
+    --ink: #15191f;
+    --muted: #63707e;
+    --line: #cfd8e1;
+    --accent: #0f8f84;
+    --alert: #c6483c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10141a;
+      --panel: #171d25;
+      --ink: #e8edf3;
+      --muted: #8b99a8;
+      --line: #2a333e;
+      --accent: #37c2b3;
+      --alert: #e2685a;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10141a;
+    --panel: #171d25;
+    --ink: #e8edf3;
+    --muted: #8b99a8;
+    --line: #2a333e;
+    --accent: #37c2b3;
+    --alert: #e2685a;
+  }
+  html, body { height: 100%; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Noto Sans TC", system-ui, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 16px;
+  }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 36px 28px 28px;
+    width: min(420px, 100%);
+    text-align: center;
+  }
+  .eyebrow {
+    font-size: 12px;
+    letter-spacing: .18em;
+    color: var(--muted);
+    margin: 0 0 20px;
+  }
+  .dial { position: relative; width: min(260px, 70vw); margin: 0 auto; }
+  svg { display: block; width: 100%; height: auto; }
+  .track { fill: none; stroke: var(--line); stroke-width: 8; }
+  .arc {
+    fill: none; stroke: var(--accent); stroke-width: 8; stroke-linecap: round;
+    transform: rotate(-90deg); transform-origin: 50% 50%;
+    transition: stroke-dashoffset .2s linear, stroke .3s;
+  }
+  .time {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-family: "DM Mono", ui-monospace, monospace;
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(38px, 13vw, 54px);
+    font-weight: 300;
+  }
+  .urgent .arc { stroke: var(--alert); }
+  .urgent .time { color: var(--alert); }
+  .controls { display: flex; gap: 10px; justify-content: center; margin-top: 26px; }
+  button {
+    font: inherit; font-weight: 600;
+    padding: 11px 26px; border-radius: 999px; cursor: pointer;
+    border: 1px solid var(--line); background: transparent; color: var(--ink);
+  }
+  button.primary { background: var(--alert); border-color: var(--alert); color: #fff; }
+  button:not(.primary) { color: var(--alert); border-color: color-mix(in srgb, var(--alert) 45%, var(--line)); }
+  button:focus-visible { outline: 2px solid var(--alert); outline-offset: 3px; }
+  .hint { margin: 18px 0 0; font-size: 12px; color: var(--muted); }
+  @media (prefers-reduced-motion: reduce) { .arc { transition: none; } }
+</style>
+
+<main class="card" id="card">
+  <p class="eyebrow">5 MINUTE TIMER</p>
+  <div class="dial">
+    <svg viewBox="0 0 120 120" aria-hidden="true">
+      <circle class="track" cx="60" cy="60" r="54"></circle>
+      <circle class="arc" id="arc" cx="60" cy="60" r="54" stroke-dasharray="339.3" stroke-dashoffset="0"></circle>
+    </svg>
+    <div class="time" id="time" role="timer" aria-live="off">05:00</div>
+  </div>
+  <div class="controls">
+    <button class="primary" id="toggle">開始</button>
+    <button id="reset">重設</button>
+  </div>
+  <p class="hint">空白鍵：開始／暫停　·　R：重設</p>
+</main>
+
+<script>
+  const TOTAL = 5 * 60 * 1000, CIRC = 2 * Math.PI * 54;
+  const card = document.getElementById("card"), arc = document.getElementById("arc");
+  const timeEl = document.getElementById("time"), toggle = document.getElementById("toggle");
+  let remaining = TOTAL, endAt = null, tick = null;
+
+  const left = () => endAt ? Math.max(0, endAt - Date.now()) : remaining;
+
+  function render() {
+    const ms = left(), s = Math.ceil(ms / 1000);
+    timeEl.textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0");
+    arc.style.strokeDasharray = CIRC;
+    arc.style.strokeDashoffset = CIRC * (1 - ms / TOTAL);
+    card.classList.toggle("urgent", ms <= 30000 && ms > 0);
+    if (endAt && ms === 0) { stop(true); }
+  }
+
+  function start() {
+    endAt = Date.now() + remaining;
+    tick = setInterval(render, 100);
+    toggle.textContent = "暫停";
+    timeEl.setAttribute("aria-live", "off");
+    render();
+  }
+
+  function stop(done) {
+    remaining = done ? 0 : left();
+    endAt = null;
+    clearInterval(tick); tick = null;
+    toggle.textContent = done ? "時間到" : "繼續";
+    if (done) { timeEl.setAttribute("aria-live", "assertive"); beep(); }
+    render();
+  }
+
+  function reset() {
+    clearInterval(tick); tick = null; endAt = null; remaining = TOTAL;
+    toggle.textContent = "開始";
+    render();
+  }
+
+  function beep() {
+    try {
+      const ac = new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      o.frequency.value = 880; g.gain.setValueAtTime(0.18, ac.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 1.2);
+      o.start(); o.stop(ac.currentTime + 1.2);
+    } catch (e) { /* 無音訊權限時靜音結束 */ }
+  }
+
+  toggle.addEventListener("click", () => {
+    if (endAt) stop(false);
+    else if (remaining > 0) start();
+    else reset();
+  });
+  document.getElementById("reset").addEventListener("click", reset);
+  document.addEventListener("keydown", e => {
+    if (e.code === "Space") { e.preventDefault(); toggle.click(); }
+    if (e.key === "r" || e.key === "R") reset();
+  });
+
+  render();
+</script>
